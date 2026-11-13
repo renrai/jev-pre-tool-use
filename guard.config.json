@@ -1,0 +1,8 @@
+{
+  "tools": ["Bash", "PowerShell"],
+  "askAtRisk": 1.5,
+  "denyAtRisk": 2.5,
+  "flagThreshold": 0.8,
+  "denyEnabled": false,
+  "timeoutMs": 4000
+}
