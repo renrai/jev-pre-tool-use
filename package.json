@@ -1,7 +1,7 @@
 {
   "name": "jev-command-guard",
   "version": "0.1.0",
-  "description": "Hook PreToolUse do Claude Code que usa o Jev (TypeSafe AI) para classificar o risco de comandos Bash/PowerShell antes de executar.",
+  "description": "Claude Code PreToolUse hook that uses Jev (TypeSafe AI) to assess the risk of Bash/PowerShell commands before they run.",
   "type": "module",
   "private": true,
   "engines": {

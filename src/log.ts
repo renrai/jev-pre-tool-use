@@ -5,7 +5,7 @@ import type { Decision } from "./policy.ts";
 
 export const LOG_FILE = path.join(ROOT, "logs", "decisions.jsonl");
 
-/** Uma linha do log: o que foi perguntado, o que o Jev respondeu e o que o hook fez. */
+/** One log line: what was asked, what Jev answered, and what the hook did. */
 export interface LogEntry {
   ts: string;
   tool: string;
@@ -28,7 +28,7 @@ export function createFileLogger(file = LOG_FILE): Logger {
       mkdirSync(path.dirname(file), { recursive: true });
       appendFileSync(file, JSON.stringify(entry) + "\n", "utf8");
     } catch {
-      // Logar nunca pode derrubar o hook.
+      // Logging must never bring the hook down.
     }
   };
 }

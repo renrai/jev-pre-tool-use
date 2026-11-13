@@ -14,7 +14,7 @@ const bash = (command: string): HookInput => ({
   cwd: "/repo",
 });
 
-/** Cliente real do SDK com um fetch falso: testa o caminho completo sem rede nem chave. */
+/** Real SDK client with a fake fetch: tests the full path without network or key. */
 function fakeClient(body: unknown, status = 200) {
   const requests: { url: string; body: any }[] = [];
   const client = new TypeSafeClient({
@@ -36,7 +36,7 @@ function deps(classify: (s: any) => Promise<GuardResult>) {
 }
 
 describe("runGuard", () => {
-  it("manda state e as 6 perguntas para /v1/systemone", async () => {
+  it("sends the state and the 6 questions to /v1/systemone", async () => {
     const { classify, requests } = fakeClient(apiResponse(answers()));
     await runGuard(bash("ls"), deps(classify).deps);
 
@@ -55,7 +55,7 @@ describe("runGuard", () => {
     assert.equal(requests[0]!.body.questions.risk.type, "score");
   });
 
-  it("não opina (null) em comando de baixo risco, mas registra no log", async () => {
+  it("stays silent (null) on a low-risk command but still logs it", async () => {
     const { classify } = fakeClient(apiResponse(answers()));
     const { logs, deps: d } = deps(classify);
     assert.equal(await runGuard(bash("git status"), d), null);
@@ -65,17 +65,17 @@ describe("runGuard", () => {
     assert.equal(logs[0]!.inputTokens, 512);
   });
 
-  it("devolve permissionDecision ask para comando destrutivo", async () => {
+  it("returns permissionDecision ask for a destructive command", async () => {
     const risky = answers({ category: { choice: "git" }, risk: { score: 2.2 }, deletes_data: { noul: 0.97 } });
     const { classify } = fakeClient(apiResponse(risky));
     const out = await runGuard(bash("git reset --hard HEAD~5"), deps(classify).deps);
 
     assert.equal(out?.hookSpecificOutput.hookEventName, "PreToolUse");
     assert.equal(out?.hookSpecificOutput.permissionDecision, "ask");
-    assert.match(out!.hookSpecificOutput.permissionDecisionReason, /apaga\/sobrescreve dados \(97%\)/);
+    assert.match(out!.hookSpecificOutput.permissionDecisionReason, /deletes\/overwrites data \(97%\)/);
   });
 
-  it("falha aberto: erro da API vira null e é registrado", async () => {
+  it("fails open: an API error becomes null and is logged", async () => {
     const { classify } = fakeClient({ error: "invalid key" }, 401);
     const { logs, deps: d } = deps(classify);
     assert.equal(await runGuard(bash("rm -rf /"), d), null);
@@ -83,7 +83,7 @@ describe("runGuard", () => {
     assert.match(logs[0]!.error!, /401/);
   });
 
-  it("ignora ferramentas fora da lista e comandos vazios sem chamar a API", async () => {
+  it("ignores unlisted tools and empty commands without calling the API", async () => {
     const { classify, requests } = fakeClient(apiResponse(answers()));
     const d = deps(classify).deps;
     assert.equal(await runGuard({ tool_name: "Read", tool_input: {} }, d), null);

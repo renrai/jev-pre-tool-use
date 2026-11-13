@@ -2,11 +2,11 @@ import { TypeSafeClient, type SystemOneResult } from "@typesafe-ai/sdk";
 import { loadEnv, type GuardConfig } from "./config.ts";
 import { questions, type GuardQuestions } from "./questions.ts";
 
-/** O que o Jev recebe como `state`: o comando e um pouco de contexto. */
+/** What Jev receives as `state`: the command plus a bit of context. */
 export interface CommandState {
   tool: string;
   command: string;
-  /** Descrição que o próprio Claude escreveu para o comando, quando houver. */
+  /** The description Claude itself wrote for the command, when available. */
   description?: string;
   cwd?: string;
 }
@@ -19,17 +19,17 @@ export function createClient(config: GuardConfig): TypeSafeClient {
   loadEnv();
   return new TypeSafeClient({
     timeout: config.timeoutMs,
-    // Num hook, esperar muito é pior que errar: uma tentativa extra e pronto.
+    // In a hook, waiting too long is worse than being wrong: one extra attempt and done.
     retry: { maxRetries: 1, backoffInitialMs: 200 },
-    // O stderr do hook aparece no Claude Code; erros são tratados por nós.
+    // The hook's stderr shows up in Claude Code; we handle errors ourselves.
     logLevel: "off",
   });
 }
 
-/** Faz UMA chamada ao Jev com todas as perguntas de questions.ts. */
+/** Makes ONE call to Jev with all the questions from questions.ts. */
 export function createClassifier(client: TypeSafeClient): Classifier {
   return async (state) => {
-    // O state é um objeto JSON: campos indefinidos são omitidos.
+    // The state is a JSON object: undefined fields are omitted.
     const payload: Record<string, string> = { tool: state.tool, command: state.command };
     if (state.description) payload.description = state.description;
     if (state.cwd) payload.cwd = state.cwd;

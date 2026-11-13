@@ -3,7 +3,7 @@ import type { GuardConfig } from "./config.ts";
 import type { Logger } from "./log.ts";
 import { decide } from "./policy.ts";
 
-/** O JSON que o Claude Code manda no stdin de um hook PreToolUse (só o que usamos). */
+/** The JSON Claude Code sends on stdin to a PreToolUse hook (only the fields we use). */
 export interface HookInput {
   hook_event_name?: string;
   tool_name: string;
@@ -11,7 +11,7 @@ export interface HookInput {
   cwd?: string;
 }
 
-/** O JSON que o hook devolve no stdout para pedir confirmação ou bloquear. */
+/** The JSON the hook writes to stdout to ask for confirmation or block. */
 export interface HookOutput {
   hookSpecificOutput: {
     hookEventName: "PreToolUse";
@@ -28,9 +28,9 @@ export interface GuardDeps {
 }
 
 /**
- * Núcleo do hook, sem I/O de processo (testável com um classificador falso).
- * Retorna null quando o hook não deve opinar: ferramenta fora da lista, sem comando,
- * risco baixo ou erro na API. Ou seja, se o Jev falhar, nada quebra (fail-open).
+ * The hook's core, free of process I/O (testable with a fake classifier).
+ * Returns null when the hook should stay silent: tool not in the list, no command,
+ * low risk, or an API error. In other words, if Jev fails, nothing breaks (fail-open).
  */
 export async function runGuard(input: HookInput, deps: GuardDeps): Promise<HookOutput | null> {
   const now = deps.now ?? Date.now;

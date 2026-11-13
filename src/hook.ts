@@ -1,10 +1,10 @@
 /**
- * Ponto de entrada do hook PreToolUse do Claude Code.
+ * Entry point for the Claude Code PreToolUse hook.
  *
- *   stdin  -> JSON com tool_name, tool_input.command, cwd...
- *   stdout -> JSON com permissionDecision "ask"/"deny", ou nada (segue o fluxo normal)
+ *   stdin  -> JSON with tool_name, tool_input.command, cwd...
+ *   stdout -> JSON with permissionDecision "ask"/"deny", or nothing (normal flow continues)
  *
- * Sempre sai com código 0: qualquer falha resulta em "não opinar", nunca em travar o Claude.
+ * Always exits with code 0: any failure means "stay silent", never blocking Claude.
  */
 import { createClassifier, createClient } from "./classify.ts";
 import { loadConfig } from "./config.ts";
@@ -26,7 +26,7 @@ async function main(): Promise<string> {
   try {
     classify = createClassifier(createClient(config));
   } catch (err) {
-    // Ex.: TYPESAFE_API_KEY ausente. Registra e deixa passar.
+    // E.g. TYPESAFE_API_KEY is missing. Log it and let the command through.
     log({
       ts: new Date().toISOString(),
       tool: input.tool_name,
@@ -42,7 +42,7 @@ async function main(): Promise<string> {
   return output ? JSON.stringify(output) : "";
 }
 
-// Espera o stdout esvaziar antes de sair (num pipe, write é assíncrono).
+// Wait for stdout to drain before exiting (writes to a pipe are asynchronous).
 main()
   .catch(() => "")
   .then((out) => process.stdout.write(out, () => process.exit(0)));

@@ -7,50 +7,50 @@ import { answers } from "./fixtures.ts";
 const cfg = DEFAULT_CONFIG;
 
 describe("decide", () => {
-  it("deixa passar comandos de baixo risco sem flags", () => {
+  it("lets low-risk commands with no flags pass", () => {
     const v = decide(answers(), cfg);
     assert.equal(v.decision, "pass");
     assert.deepEqual(v.reasons, []);
   });
 
-  it("pede confirmação quando o risco passa de askAtRisk", () => {
+  it("asks for confirmation when risk reaches askAtRisk", () => {
     const v = decide(answers({ risk: { score: 1.8 } }), cfg);
     assert.equal(v.decision, "ask");
-    assert.match(v.summary, /risco 1\.8\/3 \(alto\)/);
+    assert.match(v.summary, /risk 1\.8\/3 \(high\)/);
   });
 
-  it("pede confirmação quando uma flag passa do limite, mesmo com risco baixo", () => {
+  it("asks for confirmation when a flag crosses the threshold, even at low risk", () => {
     const v = decide(answers({ touches_secrets: { noul: 0.93 } }), cfg);
     assert.equal(v.decision, "ask");
-    assert.deepEqual(v.reasons, ["mexe com credenciais (93%)"]);
+    assert.deepEqual(v.reasons, ["touches credentials (93%)"]);
   });
 
-  it("ignora flags abaixo do limite", () => {
+  it("ignores flags below the threshold", () => {
     const v = decide(answers({ deletes_data: { noul: 0.79 } }), cfg);
     assert.equal(v.decision, "pass");
   });
 
-  it("nunca bloqueia com denyEnabled = false", () => {
+  it("never blocks when denyEnabled = false", () => {
     const v = decide(answers({ risk: { score: 3 }, runs_remote_code: { noul: 1 } }), cfg);
     assert.equal(v.decision, "ask");
   });
 
-  it("bloqueia risco crítico com denyEnabled = true", () => {
+  it("blocks critical risk when denyEnabled = true", () => {
     const v = decide(answers({ risk: { score: 2.7 } }), { ...cfg, denyEnabled: true });
     assert.equal(v.decision, "deny");
   });
 
-  it("bloqueia código remoto com denyEnabled = true, mesmo com score moderado", () => {
+  it("blocks remote code when denyEnabled = true, even with a moderate score", () => {
     const v = decide(answers({ risk: { score: 1.6 }, runs_remote_code: { noul: 0.9 } }), { ...cfg, denyEnabled: true });
     assert.equal(v.decision, "deny");
   });
 });
 
 describe("riskLabel", () => {
-  it("arredonda o score para o nível mais próximo e limita a 0..3", () => {
-    assert.equal(riskLabel(-1), "inofensivo");
-    assert.equal(riskLabel(0.4), "inofensivo");
-    assert.equal(riskLabel(1.5), "alto");
-    assert.equal(riskLabel(9), "crítico");
+  it("rounds the score to the nearest level and clamps to 0..3", () => {
+    assert.equal(riskLabel(-1), "harmless");
+    assert.equal(riskLabel(0.4), "harmless");
+    assert.equal(riskLabel(1.5), "high");
+    assert.equal(riskLabel(9), "critical");
   });
 });

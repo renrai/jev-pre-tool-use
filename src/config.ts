@@ -1,21 +1,21 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-/** Raiz do projeto (pasta acima de src/), independente de onde o hook é chamado. */
+/** Project root (the folder above src/), regardless of where the hook is invoked from. */
 export const ROOT = path.resolve(import.meta.dirname, "..");
 
 export interface GuardConfig {
-  /** Ferramentas do Claude Code que passam pelo Jev. */
+  /** Claude Code tools that go through Jev. */
   tools: string[];
-  /** A partir deste risco (escala 0..3) o hook pede confirmação. */
+  /** From this risk (0..3 scale) on, the hook asks for confirmation. */
   askAtRisk: number;
-  /** A partir deste risco o hook bloqueia (só quando denyEnabled = true). */
+  /** From this risk on, the hook blocks (only when denyEnabled = true). */
   denyAtRisk: number;
-  /** Probabilidade mínima para uma pergunta sim/não contar como "sim". */
+  /** Minimum probability for a yes/no question to count as "yes". */
   flagThreshold: number;
-  /** Se false, o pior caso é "ask" (pedir confirmação). Se true, risco crítico é bloqueado. */
+  /** If false, the worst outcome is "ask". If true, critical risk is blocked. */
   denyEnabled: boolean;
-  /** Timeout por tentativa da chamada ao Jev, em ms. */
+  /** Per-attempt timeout for the Jev call, in ms. */
   timeoutMs: number;
 }
 
@@ -28,14 +28,14 @@ export const DEFAULT_CONFIG: GuardConfig = {
   timeoutMs: 4000,
 };
 
-/** Lê guard.config.json da raiz e completa com os valores padrão. */
+/** Reads guard.config.json from the root and fills in the defaults. */
 export function loadConfig(file = path.join(ROOT, "guard.config.json")): GuardConfig {
   if (!existsSync(file)) return { ...DEFAULT_CONFIG };
   const raw = JSON.parse(readFileSync(file, "utf8")) as Partial<GuardConfig>;
   return { ...DEFAULT_CONFIG, ...raw };
 }
 
-/** Carrega o .env da raiz, se existir (o hook roda com o ambiente do Claude Code). */
+/** Loads .env from the root, if present (the hook runs with Claude Code's environment). */
 export function loadEnv(file = path.join(ROOT, ".env")): void {
   if (existsSync(file)) process.loadEnvFile(file);
 }

@@ -1,6 +1,6 @@
 import type { PolicyInput } from "../src/policy.ts";
 
-/** Respostas do Jev para um comando inofensivo; sobrescreva o que o teste precisar. */
+/** Jev answers for a harmless command; override whatever the test needs. */
 export function answers(overrides: Partial<{ [K in keyof PolicyInput]: Partial<PolicyInput[K]> }> = {}): PolicyInput {
   const base: PolicyInput = {
     category: { choice: "read_only", confidence: 0.95 },
@@ -16,7 +16,7 @@ export function answers(overrides: Partial<{ [K in keyof PolicyInput]: Partial<P
   return base;
 }
 
-/** Corpo de resposta da API no formato documentado de POST /v1/systemone. */
+/** API response body in the documented shape of POST /v1/systemone. */
 export function apiResponse(a: PolicyInput) {
   const categories = ["read_only", "build_test", "git", "package_install", "file_change", "network", "system"];
   return {

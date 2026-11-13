@@ -2,14 +2,14 @@ import type { GuardConfig } from "./config.ts";
 import { FLAG_LABELS, RISK_LABELS, type FlagName } from "./questions.ts";
 
 /**
- * - "pass": o hook não opina e o Claude Code segue o fluxo normal de permissões.
- *   O guardião NUNCA aprova sozinho: ele só adiciona atrito, nunca remove.
- * - "ask":  força o Claude Code a pedir sua confirmação.
- * - "deny": bloqueia o comando (só com denyEnabled = true).
+ * - "pass": the hook stays silent and Claude Code follows its normal permission flow.
+ *   The guard NEVER approves on its own: it only adds friction, never removes it.
+ * - "ask":  forces Claude Code to ask for your confirmation.
+ * - "deny": blocks the command (only with denyEnabled = true).
  */
 export type Decision = "pass" | "ask" | "deny";
 
-/** O subconjunto das respostas do Jev que a política usa (GuardAnswers encaixa aqui). */
+/** The subset of Jev's answers the policy uses (GuardAnswers fits here). */
 export interface PolicyInput {
   category: { choice: string; confidence: number };
   risk: { score: number };
@@ -21,9 +21,9 @@ export interface PolicyInput {
 
 export interface Verdict {
   decision: Decision;
-  /** Motivos legíveis, ex.: "apaga/sobrescreve dados (97%)". */
+  /** Human-readable reasons, e.g. "deletes/overwrites data (97%)". */
   reasons: string[];
-  /** Uma linha para mostrar ao usuário no prompt de confirmação. */
+  /** One line shown to the user in the confirmation prompt. */
   summary: string;
 }
 
@@ -37,15 +37,15 @@ export function riskLabel(score: number): string {
 }
 
 /**
- * Transforma probabilidades em decisão. É aqui que o Jev "vira" comportamento:
- * ele só responde as perguntas, quem decide o que fazer com as respostas é o seu código.
+ * Turns probabilities into a decision. This is where Jev "becomes" behavior:
+ * it only answers the questions; your code decides what to do with the answers.
  */
 export function decide(a: PolicyInput, cfg: PolicyConfig): Verdict {
   const flags = (Object.keys(FLAG_LABELS) as FlagName[]).filter((f) => a[f].noul >= cfg.flagThreshold);
   const reasons = flags.map((f) => `${FLAG_LABELS[f]} (${pct(a[f].noul)})`);
 
   const risk = a.risk.score;
-  const riskText = `risco ${risk.toFixed(1)}/3 (${riskLabel(risk)})`;
+  const riskText = `risk ${risk.toFixed(1)}/3 (${riskLabel(risk)})`;
   if (risk >= cfg.askAtRisk) reasons.unshift(riskText);
 
   const critical = risk >= cfg.denyAtRisk || flags.includes("runs_remote_code");
@@ -55,6 +55,6 @@ export function decide(a: PolicyInput, cfg: PolicyConfig): Verdict {
   else if (reasons.length > 0) decision = "ask";
 
   const head = decision === "pass" ? riskText : reasons.join(" · ");
-  const summary = `Jev: ${head} · categoria ${a.category.choice} (${pct(a.category.confidence)})`;
+  const summary = `Jev: ${head} · category ${a.category.choice} (${pct(a.category.confidence)})`;
   return { decision, reasons, summary };
 }

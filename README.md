@@ -1,66 +1,66 @@
 # jev-command-guard
 
-Um guardião para o [Claude Code](https://claude.com/claude-code) que usa o **Jev**, o modelo de decisão da [TypeSafe AI](https://docs.typesafe.ai), para avaliar cada comando Bash/PowerShell **antes** de ele rodar. Se o comando parecer perigoso, o Claude Code para e pede sua confirmação, mostrando o motivo.
+A guard for [Claude Code](https://claude.com/claude-code) that uses **Jev**, the decision model from [TypeSafe AI](https://docs.typesafe.ai), to assess every Bash/PowerShell command **before** it runs. If a command looks dangerous, Claude Code stops and asks for your confirmation, showing why.
 
 ```
-Claude quer rodar:  git reset --hard HEAD~5
+Claude wants to run:  git reset --hard HEAD~5
                          │
-              hook PreToolUse (src/hook.ts)
-                         │  1 chamada, ~100 ms
+              PreToolUse hook (src/hook.ts)
+                         │  1 call, ~100 ms
                          ▼
-        Jev responde 6 perguntas tipadas em paralelo
+        Jev answers 6 typed questions in parallel
    category: git (97%) · risk: 2.2/3 · deletes_data: 0.97 ...
                          │
-              política (src/policy.ts)
+              policy (src/policy.ts)
                          ▼
-   ⚠ Confirmação: "Jev: risco 2.2/3 (alto) · apaga/sobrescreve dados (97%)"
+   ⚠ Confirmation: "Jev: risk 2.2/3 (high) · deletes/overwrites data (97%)"
 ```
 
-O projeto existe para **aprender como o Jev funciona** num caso de uso real, que roda dezenas de vezes por dia enquanto você trabalha.
+This project exists to **learn how Jev works** through a real use case that runs dozens of times a day while you work.
 
-## O que é o Jev, em uma frase
+## Jev in one sentence
 
-Um modelo que **não gera texto**: você manda um `state` (o dado) e `questions` tipadas, e ele devolve respostas que só podem ser as opções que você definiu, com probabilidades.
+A model that **doesn't generate text**: you send a `state` (the data) and typed `questions`, and it returns answers that can only be the options you defined, with probabilities.
 
-| Tipo | Usado aqui para | Retorno |
+| Type | Used here for | Returns |
 |---|---|---|
-| `choice` | `category`: read_only, build_test, git, package_install, file_change, network, system | opção escolhida + probabilidade de cada uma |
-| `score` | `risk`: escala de 0 (inofensivo) a 3 (crítico) | média ponderada, ex.: `2.2` |
-| `noul` | `deletes_data`, `sends_data_out`, `touches_secrets`, `runs_remote_code` | probabilidade de "sim", de 0 a 1 |
+| `choice` | `category`: read_only, build_test, git, package_install, file_change, network, system | chosen option + probability of each |
+| `score` | `risk`: scale from 0 (harmless) to 3 (critical) | weighted average, e.g. `2.2` |
+| `noul` | `deletes_data`, `sends_data_out`, `touches_secrets`, `runs_remote_code` | probability of "yes", from 0 to 1 |
 
-As perguntas ficam em [src/questions.ts](src/questions.ts). O SDK TypeScript infere os tipos das respostas a partir delas: `answers.category.choice` já vem tipado como `"read_only" | "build_test" | ...`.
+The questions live in [src/questions.ts](src/questions.ts). The TypeScript SDK infers answer types from them: `answers.category.choice` is already typed as `"read_only" | "build_test" | ...`.
 
-## Princípios do guardião
+## Design principles
 
-- **Só adiciona atrito, nunca remove.** O hook pode pedir confirmação (`ask`) ou bloquear (`deny`, opcional), mas nunca aprova um comando sozinho. Comandos de baixo risco seguem o fluxo normal de permissões do Claude Code.
-- **Falha aberto.** Sem chave, sem rede ou com erro da API, o hook não opina e o Claude Code segue normalmente. O erro vai para o log.
-- **O Jev responde, o seu código decide.** Os limites ficam em [guard.config.json](guard.config.json) e a lógica em [src/policy.ts](src/policy.ts).
+- **It only adds friction, never removes it.** The hook can ask for confirmation (`ask`) or block (`deny`, optional), but it never approves a command on its own. Low-risk commands follow Claude Code's normal permission flow.
+- **It fails open.** With no key, no network or an API error, the hook stays silent and Claude Code carries on normally. The error goes to the log.
+- **Jev answers, your code decides.** Thresholds live in [guard.config.json](guard.config.json) and the logic in [src/policy.ts](src/policy.ts).
 
-## Instalação
+## Installation
 
-Requisitos: Node.js 22.18+ (o projeto roda `.ts` direto, sem build) e uma chave da TypeSafe.
+Requirements: Node.js 22.18+ (the project runs `.ts` directly, no build step) and a TypeSafe API key.
 
 ```bash
 npm install
-cp .env.example .env   # e coloque sua TYPESAFE_API_KEY
+cp .env.example .env   # then add your TYPESAFE_API_KEY
 ```
 
-Pegue a chave **só no console oficial da TypeSafe** (veja o [Quick start](https://docs.typesafe.ai/introduction/quickstart)).
+Get your key **only from the official TypeSafe console** (see the [Quick start](https://docs.typesafe.ai/introduction/quickstart)).
 
-Teste um comando na mão:
+Try a command by hand:
 
 ```bash
 npm run try -- "git push --force origin main"
 npm run try -- --tool PowerShell "Remove-Item -Recurse -Force C:\temp"
 ```
 
-A saída mostra tudo que o Jev devolveu: a probabilidade de cada categoria, a distribuição do risco, as flags e a decisão final.
+The output shows everything Jev returned: the probability of each category, the risk distribution, the flags and the final decision.
 
-## Ativando o hook
+## Enabling the hook
 
-**Só neste projeto (já configurado):** o arquivo [.claude/settings.json](.claude/settings.json) registra o hook. Abra o Claude Code nesta pasta e use normalmente.
+**This project only (already configured):** [.claude/settings.json](.claude/settings.json) registers the hook. Open Claude Code in this folder and use it as usual.
 
-**Em todos os projetos:** adicione ao seu `~/.claude/settings.json`, trocando o caminho pelo desta pasta:
+**All projects:** add this to your `~/.claude/settings.json`, replacing the path with this folder's:
 
 ```json
 {
@@ -69,7 +69,7 @@ A saída mostra tudo que o Jev devolveu: a probabilidade de cada categoria, a di
       {
         "matcher": "Bash|PowerShell",
         "hooks": [
-          { "type": "command", "command": "node \"C:/caminho/para/jev-use-case/src/hook.ts\"", "timeout": 15 }
+          { "type": "command", "command": "node \"C:/path/to/jev-use-case/src/hook.ts\"", "timeout": 15 }
         ]
       }
     ]
@@ -77,68 +77,68 @@ A saída mostra tudo que o Jev devolveu: a probabilidade de cada categoria, a di
 }
 ```
 
-O `.env` é lido da pasta do projeto, então a chave funciona de qualquer diretório.
+The `.env` is read from the project folder, so the key works from any directory.
 
-## Acompanhando e ajustando
+## Monitoring and tuning
 
-Toda decisão é registrada em `logs/decisions.jsonl` (fora do git).
+Every decision is recorded in `logs/decisions.jsonl` (ignored by git).
 
 ```bash
-npm run report        # decisões, categorias, latência p50/p95, tokens e custo estimado
-npm run report -- 20  # + as últimas 20 decisões
+npm run report        # decisions, categories, p50/p95 latency, tokens and estimated cost
+npm run report -- 20  # + the last 20 decisions
 ```
 
-E para medir a qualidade de forma objetiva:
+To measure quality objectively:
 
 ```bash
 npm run eval
 ```
 
-O eval roda o guardião contra [eval/dataset.json](eval/dataset.json), 35 comandos rotulados à mão como `pass` ou `ask`, e mostra a acurácia, os **falsos negativos** (comando perigoso que passou, o erro grave) e os **falsos positivos** (comando inofensivo que pediu confirmação, o erro chato).
+The eval runs the guard against [eval/dataset.json](eval/dataset.json), 35 commands hand-labeled as `pass` or `ask`, and reports accuracy, **false negatives** (a dangerous command that got through, the serious error) and **false positives** (a harmless command that asked for confirmation, the annoying error).
 
-### Exercícios para aprender
+### Learning exercises
 
-1. Rode `npm run eval` e anote a acurácia. Depois mude `askAtRisk` de `1.5` para `1.0` e para `2.0`. Como se movem os falsos positivos e os negativos?
-2. Reescreva a `instruction` de `deletes_data` em [src/questions.ts](src/questions.ts) sem os exemplos entre parênteses. A acurácia cai?
-3. Adicione uma pergunta nova, por exemplo `noul("command affects files outside cwd")`, use-a na política e veja o tipo de `answers` mudar sozinho no editor.
-4. Acrescente ao dataset os comandos reais que aparecerem no `npm run report` e que o guardião errou.
-5. Ligue `"denyEnabled": true` e veja o Claude Code receber o bloqueio e tentar outro caminho.
+1. Run `npm run eval` and note the accuracy. Then change `askAtRisk` from `1.5` to `1.0` and to `2.0`. How do false positives and false negatives move?
+2. Rewrite the `deletes_data` instruction in [src/questions.ts](src/questions.ts) without the examples in parentheses. Does accuracy drop?
+3. Add a new question, for example `noul("command affects files outside cwd")`, use it in the policy and watch the type of `answers` update on its own in your editor.
+4. Add to the dataset the real commands from `npm run report` that the guard got wrong.
+5. Set `"denyEnabled": true` and watch Claude Code receive the block and try another approach.
 
-## Configuração (`guard.config.json`)
+## Configuration (`guard.config.json`)
 
-| Campo | Padrão | Efeito |
+| Field | Default | Effect |
 |---|---|---|
-| `tools` | `["Bash", "PowerShell"]` | ferramentas do Claude Code avaliadas |
-| `askAtRisk` | `1.5` | risco (0..3) a partir do qual pede confirmação |
-| `flagThreshold` | `0.8` | probabilidade mínima para uma flag sim/não contar |
-| `denyEnabled` | `false` | se `true`, risco ≥ `denyAtRisk` ou código remoto é bloqueado |
-| `denyAtRisk` | `2.5` | limite de bloqueio |
-| `timeoutMs` | `4000` | timeout por tentativa da chamada ao Jev |
+| `tools` | `["Bash", "PowerShell"]` | Claude Code tools that get assessed |
+| `askAtRisk` | `1.5` | risk (0..3) at which confirmation is requested |
+| `flagThreshold` | `0.8` | minimum probability for a yes/no flag to count |
+| `denyEnabled` | `false` | if `true`, risk ≥ `denyAtRisk` or remote code execution is blocked |
+| `denyAtRisk` | `2.5` | blocking threshold |
+| `timeoutMs` | `4000` | per-attempt timeout for the Jev call |
 
-## Estrutura
+## Structure
 
 ```
 src/
-  questions.ts   as 6 perguntas para o Jev (o "prompt" do projeto)
-  classify.ts    cliente do SDK e a chamada systemOne
-  policy.ts      probabilidades -> pass / ask / deny
-  guard.ts       núcleo do hook, testável e sem I/O de processo
-  hook.ts        entrada do hook: stdin -> stdout
-  log.ts         log JSONL
-  cli/try.ts     testa um comando e mostra todas as probabilidades
-  cli/report.ts  resumo do log
-eval/            dataset rotulado + script de avaliação
-test/            testes (node:test) com fetch falso, sem rede e sem chave
+  questions.ts   the 6 questions for Jev (the project's "prompt")
+  classify.ts    SDK client and the systemOne call
+  policy.ts      probabilities -> pass / ask / deny
+  guard.ts       hook core, testable and free of process I/O
+  hook.ts        hook entry point: stdin -> stdout
+  log.ts         JSONL log
+  cli/try.ts     assess one command and print every probability
+  cli/report.ts  log summary
+eval/            labeled dataset + evaluation script
+test/            tests (node:test) with a fake fetch, no network and no key
 ```
 
 ```bash
-npm run check   # typecheck + testes
+npm run check   # typecheck + tests
 ```
 
-## Privacidade
+## Privacy
 
-O texto de cada comando avaliado (e a pasta onde ele roda) é enviado para a API da TypeSafe. Se você trabalha com comandos que contêm dados sensíveis, leve isso em conta ou restrinja o hook com `tools` / `matcher`.
+The text of every assessed command (and the folder it runs in) is sent to the TypeSafe API. If your commands contain sensitive data, keep that in mind or narrow the hook with `tools` / `matcher`.
 
-## Licença
+## License
 
 MIT
